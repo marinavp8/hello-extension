@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optimizely y tu wallet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: una columna de lectura de 860px; secciones numeradas con la demo interactiva en el centro. */
+:root{
+  --bg:#f4f5f7; --surface:#ffffff; --ink:#14181f; --muted:#5a6472; --line:#d9dde3;
+  --danger:#c62f1f; --danger-bg:#fdeceb; --safe:#0b7a5c; --safe-bg:#e4f5ef; --warn:#a56200; --warn-bg:#fff3dc;
+  --accent:#2b4fd8; --code-bg:#eceef2;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1116; --surface:#171b22; --ink:#e8ebf0; --muted:#9aa4b2; --line:#2b323d;
+    --danger:#ff7061; --danger-bg:#2e1714; --safe:#4cd0a4; --safe-bg:#10281f; --warn:#f0b04a; --warn-bg:#2b2111;
+    --accent:#8aa2ff; --code-bg:#1f242d; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#171b22; --ink:#e8ebf0; --muted:#9aa4b2; --line:#2b323d;
+  --danger:#ff7061; --danger-bg:#2e1714; --safe:#4cd0a4; --safe-bg:#10281f; --warn:#f0b04a; --warn-bg:#2b2111;
+  --accent:#8aa2ff; --code-bg:#1f242d; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header.top{padding:48px 0 28px;border-bottom:1px solid var(--line)}
+.tag{font-family:var(--mono);font-size:13px;color:var(--danger);letter-spacing:.04em;text-transform:uppercase}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,6vw,56px);line-height:1.05;margin:10px 0 16px;text-wrap:balance}
+h2{font-family:var(--display);font-weight:800;font-size:clamp(25px,4vw,34px);line-height:1.15;margin:0 0 14px;text-wrap:balance}
+h3{font-size:18px;margin:0 0 6px}
+.lead{font-size:19px;color:var(--muted);max-width:65ch}
+section{padding:44px 0;border-bottom:1px solid var(--line)}
+section:last-of-type{border-bottom:0}
+p{max-width:68ch;margin:0 0 14px}
+code,.mono{font-family:var(--mono);font-size:.88em;background:var(--code-bg);padding:1px 6px;border-radius:4px;word-break:break-all}
+.num{font-family:var(--mono);color:var(--muted);font-size:13px;display:block;margin-bottom:6px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:22px 0 0}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat b{display:block;font-family:var(--display);font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:14px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.note{border-left:4px solid var(--warn);background:var(--warn-bg);padding:12px 16px;border-radius:0 8px 8px 0;margin:18px 0;max-width:68ch;font-size:16px}
+.note.safe{border-color:var(--safe);background:var(--safe-bg)}
+.note.bad{border-color:var(--danger);background:var(--danger-bg)}
+/* cadena de suministro */
+.chain{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:20px 0}
+.node{flex:1 1 150px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px;position:relative}
+.node b{display:block;font-size:15px;margin-bottom:2px}
+.node.hot{border-color:var(--danger);background:var(--danger-bg)}
+.arrow{align-self:center;color:var(--muted);font-family:var(--mono)}
+@media(max-width:640px){.arrow{display:none}}
+/* tabla */
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+td.t{font-family:var(--mono);white-space:nowrap;color:var(--muted);font-size:13px}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.pill.bad{background:var(--danger-bg);color:var(--danger)}
+.pill.ok{background:var(--safe-bg);color:var(--safe)}
+.pill.hyp{background:var(--warn-bg);color:var(--warn)}
+/* demo */
+.demo{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;margin-top:18px}
+.controls{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:18px}
+fieldset{border:0;padding:0;margin:0;min-width:200px}
+legend{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:0;margin-bottom:6px}
+label.opt{display:flex;gap:8px;align-items:center;font-size:15px;padding:3px 0;cursor:pointer}
+.switch{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+input[type=checkbox],input[type=radio]{accent-color:var(--danger);width:18px;height:18px}
+.stage{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.win{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.win .bar{padding:8px 12px;font-size:12px;font-family:var(--mono);color:var(--muted);border-bottom:1px solid var(--line);background:var(--code-bg)}
+.win .body{padding:14px}
+.addr{font-family:var(--mono);font-size:14px;word-break:break-all;line-height:1.7}
+.addr .d{background:var(--danger);color:#fff;border-radius:2px}
+.lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 3px}
+button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;background:var(--accent);color:#fff}
+button.sec{background:var(--code-bg);color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mm{border-color:#f6851b}
+.mm .bar{background:#f6851b;color:#1a1000;border-color:#f6851b}
+.verdict{margin-top:16px;padding:14px 16px;border-radius:10px;font-size:16px;min-height:60px}
+.verdict.bad{background:var(--danger-bg);border:1px solid var(--danger)}
+.verdict.ok{background:var(--safe-bg);border:1px solid var(--safe)}
+.verdict.idle{background:var(--code-bg);color:var(--muted)}
+/* quiz */
+.q{margin-bottom:22px}
+.q p{font-weight:600;margin-bottom:8px}
+.q button{display:block;width:100%;text-align:left;margin:6px 0;background:var(--surface);color:var(--ink);border:1px solid var(--line);font-weight:400}
+.q button.right{border-color:var(--safe);background:var(--safe-bg)}
+.q button.wrong{border-color:var(--danger);background:var(--danger-bg)}
+.q .why{font-size:15px;color:var(--muted);margin-top:6px;display:none}
+ul.clean{padding-left:20px;max-width:68ch}
+ul.clean li{margin-bottom:8px}
+footer{padding:28px 0 56px;color:var(--muted);font-size:14px}
+a{color:var(--accent)}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <span class="tag">Caso real · 16 noviembre 2026</span>
+  <h1>Cuando la web es legítima, pero el script no: Optimizely y tu wallet</h1>
+  <p class="lead">Un atacante escribió JavaScript en proyectos de clientes de Optimizely Web y lo sirvió desde un dominio de confianza a los visitantes de 178 organizaciones. Entre otras cosas, el código cambiaba direcciones de criptomonedas en la página. Veamos qué significa esto para MetaMask y para cualquiera que use una wallet en el navegador.</p>
+  <div class="stats">
+    <div class="stat"><b>178</b><span>organizaciones con el script malicioso (BBC, CNN, Zoom, GitLab, HSBC, Ledger…)</span></div>
+    <div class="stat"><b>26</b><span>veces que el atacante reconstruyó el payload en un solo día</span></div>
+    <div class="stat"><b>~7.040 $</b><span>recibidos en sus wallets en unas 9 horas</span></div>
+    <div class="stat"><b>8</b><span>redes cripto cubiertas: BTC, EVM, TRON, SOL, TON, LTC, BCH, DOGE</span></div>
+  </div>
+</header>
+
+<section id="que-paso">
+  <span class="num">01</span>
+  <h2>Qué pasó</h2>
+  <p><b>Qué es Optimizely.</b> Es un servicio que usan las empresas para hacer pruebas A/B, por ejemplo mostrar un botón verde a la mitad de los visitantes y uno azul a la otra mitad. Para eso, la web de la empresa incluye una línea que carga un fichero JavaScript desde los servidores de Optimizely (<code>cdn.optimizely.com</code>). Ese fichero es distinto para cada cliente y se ejecuta en todas sus páginas.</p>
+  <p><b>Qué es un proyecto.</b> Cada cliente tiene en Optimizely su propio espacio de configuración, llamado proyecto. Dentro hay un campo opcional, <code>projectJS</code>, donde el cliente puede pegar código JavaScript propio para que se ejecute en todas sus páginas. Es una función legítima, pensada para personalizaciones.</p>
+  <p><b>Qué hizo el atacante.</b> Consiguió escribir en ese campo en los proyectos de muchos clientes sin relación entre sí y puso ahí su código malicioso. Cómo logró el acceso de escritura sigue sin saberse: puede ser un fallo dentro de Optimizely o una credencial con acceso a varios clientes.</p>
+  <div class="note"><b>¿Fue hackeado Optimizely?</b> Con lo que se sabe, es muy probable que el fallo estuviera dentro del entorno de Optimizely, porque el atacante escribió en proyectos de muchos clientes sin relación entre sí. Pero la causa exacta no está confirmada: puede ser un sistema comprometido o una credencial con acceso a varios clientes. No se ha encontrado un comunicado público de la empresa. Es una buena ocasión para distinguir entre “hackear un servidor” y “abusar de un acceso legítimo”.</div>
+  <div class="note"><b>Analogía.</b> Una cadena de supermercados recibe sus productos de un único proveedor de confianza. Si alguien manipula los productos en el almacén del proveedor, llegan contaminados a todas las tiendas, aunque ninguna tienda haya sido atacada. Aquí igual: la web de la BBC no fue hackeada, pero el fichero que tu navegador cargaba desde un dominio de confianza llevaba dentro código del atacante.</div>
+  <p>Para el navegador todo parecía normal: dominio conocido, certificado válido, web del cliente sin tocar. Por eso el candado HTTPS no servía de nada: el código malicioso se ejecutaba dentro de la página como si fuera de la propia empresa.</p>
+
+  <div class="chain" aria-label="Cadena de suministro del ataque">
+    <div class="node"><b>Tu navegador</b>abre bbc.com, zoom.us…</div><span class="arrow">→</span>
+    <div class="node"><b>Web del cliente</b>código propio, sin tocar</div><span class="arrow">→</span>
+    <div class="node"><b>cdn.optimizely.com</b>dominio de confianza</div><span class="arrow">→</span>
+    <div class="node hot"><b>projectJS manipulado</b>carga <code>1688360.cc/track.js</code></div><span class="arrow">→</span>
+    <div class="node hot"><b>Payload en tu pestaña</b>mismo origen que la web</div>
+  </div>
+
+  <h3>Cronología (UTC)</h3>
+  <div class="scroll"><table>
+    <tr><th>Hora</th><th>Evento</th></tr>
+    <tr><td class="t">04:21</td><td>Primera inyección observada en Optimizely (BBC)</td></tr>
+    <tr><td class="t">08:10</td><td>Primera versión de <code>track.js</code>: el “clipper” de criptomonedas</td></tr>
+    <tr><td class="t">11:20</td><td>Se modifica el snippet de Zoom</td></tr>
+    <tr><td class="t">13:03</td><td>El atacante mueve lo robado hacia exchanges</td></tr>
+    <tr><td class="t">13:43</td><td>Añade skimmer de tarjetas</td></tr>
+    <tr><td class="t">17:13–17:57</td><td>Añade exploits para iPhone/iPad (iOS 18.6 y anteriores)</td></tr>
+    <tr><td class="t">~20:40–21:10</td><td>Limpieza masiva. A las 21:52 solo TalkTalk seguía infectado</td></tr>
+  </table></div>
+  <div class="note">El artículo original es de Report URI. Las cifras son las de su publicación y pueden haberse actualizado después. Enlace: <a href="https://blog.report-uri.com/worlds-largest-brands-infected-with-malware-via-optimizely/">blog.report-uri.com</a>.</div>
+</section>
+
+<section id="payload">
+  <span class="num">02</span>
+  <h2>Qué hacía el código</h2>
+  <div class="grid2">
+    <div class="card"><h3>Cambio de direcciones cripto</h3><p>Detecta direcciones válidas (con checksum) y las sustituye por las del atacante en el texto de la página, campos de formulario, enlaces, imágenes, portapapeles, peticiones <code>fetch</code>/XHR, <code>window.open</code> y la hoja de compartir de iOS. Vuelve a escanear cada vez que cambia el DOM.</p></div>
+    <div class="card"><h3>Skimmer de tarjetas</h3><p>Vigila formularios y POST con número de tarjeta válido (Luhn), caducidad y CVV, y los envía con <code>sendBeacon</code>. No puede ver tarjetas escritas en iframes de otro origen como los de Stripe o Adyen.</p></div>
+    <div class="card"><h3>Cookies y capturas</h3><p>Cuando cambia una dirección cerca de texto de wallet o pago, envía URL, cookies sin HttpOnly, la dirección original y una captura de pantalla.</p></div>
+    <div class="card"><h3>Exploits iOS</h3><p>En iPhone y iPad lanza una cadena de exploits en un iframe oculto según la versión. Síntoma visible: la página se recarga cada 60 segundos. Parcheado en iOS 18.7.3+ y 26.3+.</p></div>
+  </div>
+  <div class="note safe"><b>Por qué importan los iframes de pago.</b> Un script de la página solo ve lo que hay en su propio origen. Si el campo de la tarjeta lo sirve un iframe de Stripe o Adyen (otro origen), el navegador impide que el script lo lea. Si la web recoge la tarjeta en sus propios campos, el skimmer sí la ve. Por eso conviene delegar la captura de tarjetas en el proveedor de pagos. Se desconoce cuántas tarjetas se robaron; quien pagó en un sitio afectado el 16 de noviembre debe vigilar sus extractos.</div>
+</section>
+
+<section id="metamask">
+  <span class="num">03</span>
+  <h2>Qué significa para MetaMask</h2>
+  <p>La idea clave para los alumnos: <b>MetaMask no fue atacada. Lo atacado fue la página en la que la usas.</b> El código malicioso corre en la web, no dentro de la extensión. Eso define qué puede y qué no puede hacer.</p>
+
+  <div class="scroll"><table>
+    <tr><th>Capacidad del script</th><th>Estado</th><th>Por qué</th></tr>
+    <tr><td>Cambiar la dirección de destino que ves o copias en la web</td><td><span class="pill bad">Documentado</span></td><td>Es el núcleo del ataque. Cubre EVM, así que afecta a direcciones <code>0x…</code> de Ethereum, BSC, Polygon, etc.</td></tr>
+    <tr><td>Alterar la dirección en la petición que la web envía a su backend</td><td><span class="pill bad">Documentado</span></td><td>Hooks sobre <code>fetch</code> y XHR. La pantalla puede mostrar la dirección correcta mientras viaja otra.</td></tr>
+    <tr><td>Leer tu frase semilla o clave privada de MetaMask</td><td><span class="pill ok">No puede</span></td><td>Están cifradas dentro de la extensión, en un contexto aislado de la página.</td></tr>
+    <tr><td>Firmar o enviar una transacción sin que lo apruebes</td><td><span class="pill ok">No puede</span></td><td>MetaMask siempre muestra una ventana de confirmación propia.</td></tr>
+    <tr><td>Hacer que una dapp te proponga una transacción distinta (otro destinatario, un <code>approve</code>, una firma <code>permit</code>)</td><td><span class="pill hyp">Posible, no observado</span></td><td>Ampliación didáctica. El artículo no describe contratos ni <code>window.ethereum</code>, pero cualquier JS en la página de una dapp puede llamarlo. Dependería de que el usuario apruebe sin leer.</td></tr>
+    <tr><td>Robar cookies de sesión sin HttpOnly de la web</td><td><span class="pill bad">Documentado</span></td><td>Riesgo para cuentas de exchanges y servicios web, no para la wallet.</td></tr>
+  </table></div>
+
+  <div class="note bad"><b>El punto débil real:</b> el humano. Si copias una dirección de una web, la pegas y firmas sin comparar, MetaMask te pedirá confirmación de una transacción totalmente válida hacia el atacante. La wallet hace bien su trabajo y aun así pierdes los fondos.</div>
+  <div class="note">En la lista de afectadas aparece Ledger. Un hardware wallet protege la clave, pero no evita que la web te enseñe una dirección falsa. Lo que salva es comprobar la dirección en la pantalla del dispositivo.</div>
+</section>
+
+<section id="demo">
+  <span class="num">04</span>
+  <h2>Simulación: dónde se rompe el envío</h2>
+  <p>Direcciones ficticias. Elige dónde actúa el script y si está activo, y pulsa enviar. Fíjate en qué ves en la web y qué ve MetaMask.</p>
+
+  <div class="demo">
+    <div class="controls">
+      <label class="switch"><input type="checkbox" id="inf"> Script de Optimizely comprometido</label>
+      <fieldset>
+        <legend>Dónde cambia la dirección</legend>
+        <label class="opt"><input type="radio" name="ch" value="dom" checked> En lo que se ve (página o campo)</label>
+        <label class="opt"><input type="radio" name="ch" value="clip"> En el portapapeles al copiar</label>
+        <label class="opt"><input type="radio" name="ch" value="net"> En la petición de red (la pantalla no cambia)</label>
+      </fieldset>
+    </div>
+
+    <div class="stage">
+      <div class="win">
+        <div class="bar">tienda-cripto.example · página de pago</div>
+        <div class="body">
+          <div class="lbl">Dirección que tú querías (factura)</div>
+          <div class="addr" id="want"></div>
+          <div class="lbl">Dirección que muestra la web</div>
+          <div class="addr" id="shown"></div>
+          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+            <button id="send">Enviar 0,5 ETH</button>
+            <button class="sec" id="reset">Reiniciar</button>
+          </div>
+        </div>
+      </div>
+      <div class="win mm" id="mmwin" hidden>
+        <div class="bar">MetaMask · Confirmar transacción</div>
+        <div class="body">
+          <div class="lbl">Importe</div><div class="addr">0,5 ETH</div>
+          <div class="lbl">Para</div>
+          <div class="addr" id="mmto"></div>
+          <div class="lbl">Coincide con tu factura</div>
+          <div class="addr" id="mmcmp"></div>
+        </div>
+      </div>
+    </div>
+    <div class="verdict idle" id="verdict">Pulsa “Enviar 0,5 ETH”.</div>
+  </div>
+</section>
+
+<section id="defensa">
+  <span class="num">05</span>
+  <h2>Cómo protegerse</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Si usas wallet</h3>
+      <ul class="clean">
+        <li>Guarda las direcciones frecuentes en la libreta de MetaMask o en tu gestor, no las copies de una web.</li>
+        <li>En la ventana de MetaMask, compara <b>toda</b> la dirección, no solo el principio y el final.</li>
+        <li>Con hardware wallet, verifica la dirección en su pantalla.</li>
+        <li>Primero una transferencia pequeña de prueba cuando el importe sea grande.</li>
+        <li>Actualiza iPhone/iPad a iOS 18.7.3 o superior, o 26.3 o superior.</li>
+        <li>Si compraste con tarjeta en un sitio afectado ese día, vigila los cargos.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Si desarrollas la web o la dapp</h3>
+      <ul class="clean">
+        <li>Reduce los scripts de terceros, sobre todo en páginas de pago o con wallet.</li>
+        <li>CSP con <code>script-src</code> limitado. Permitir solo <code>cdn.optimizely.com</code> no habría bastado, el código venía de ahí.</li>
+        <li>Evita <code>'strict-dynamic'</code>, <code>'unsafe-eval'</code> y <code>'unsafe-inline'</code>.</li>
+        <li><code>connect-src</code> y <code>frame-src</code> cerrados frenan la exfiltración y los iframes de exploit. El artículo advierte que no frenan el cambio de direcciones dentro de la página.</li>
+        <li>Activa informes de CSP (empieza en modo Report-Only) y monitoriza scripts nuevos.</li>
+        <li>SRI no encaja bien aquí: el fichero cambia por cliente y se sirve dinámicamente.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-top:28px">Indicadores de compromiso (para buscar en vuestros proyectos)</h3>
+  <div class="scroll"><table>
+    <tr><th>Tipo</th><th>Valor</th></tr>
+    <tr><td>Dominio C2</td><td><code>1688360.cc</code> (<code>track.js</code>, <code>card.php</code>, <code>hit.php</code>)</td></tr>
+    <tr><td>Routers iOS</td><td><code>5vobauua3ojpklx.icu</code>, <code>eil786npto9u5bq.icu</code>, <code>l7bcsnwc7nzr3uo.icu</code></td></tr>
+    <tr><td>Oleada previa</td><td><code>webshell.lol</code>, <code>linkforge.cc</code></td></tr>
+    <tr><td>Marcas en código</td><td><code>atob(</code> en Project JavaScript, <code>window._k7</code>, <code>window.__k7b</code>, <code>data-channel-code="02111110"</code></td></tr>
+    <tr><td>Wallet EVM del atacante</td><td><code>0xC4026b06D82b0F0B363eda0642D61CfbDc17884e</code></td></tr>
+  </table></div>
+</section>
+
+<section id="quiz">
+  <span class="num">06</span>
+  <h2>Comprueba lo aprendido</h2>
+  <div id="quizbox"></div>
+</section>
+
+<footer>Material didáctico basado en el análisis de Report URI sobre el incidente del 16 de noviembre de 2026. Las filas marcadas como “posible, no observado” son ampliaciones del profesor, no hallazgos del informe.</footer>
+</div>
+
+<script>
+(function(){
+  var WANT="0x3F5c8aB1d29E47c0a6B4e8d1F7203a95Cc61B2e9";
+  var BAD ="0x9aD0e47B15c3f8206Ee1b7A4d5C90f3b82a7E641";
+  var $=function(id){return document.getElementById(id)};
+  function diff(a,ref){
+    var out="";
+    for(var i=0;i<a.length;i++){
+      var c=a.charAt(i);
+      out+= (c!==ref.charAt(i)) ? '<span class="d">'+c+'</span>' : c;
+    }
+    return out;
+  }
+  function chan(){return document.querySelector('input[name=ch]:checked').value}
+  function shownAddr(){
+    return ($("inf").checked && chan()==="dom") ? BAD : WANT;
+  }
+  function render(){
+    $("want").textContent=WANT;
+    $("shown").innerHTML=diff(shownAddr(),WANT);
+  }
+  function reset(){
+    $("mmwin").hidden=true;
+    var v=$("verdict"); v.className="verdict idle"; v.textContent="Pulsa “Enviar 0,5 ETH”.";
+    render();
+  }
+  $("send").addEventListener("click",function(){
+    var inf=$("inf").checked, c=chan();
+    var dest = inf ? BAD : WANT;
+    $("mmwin").hidden=false;
+    $("mmto").innerHTML=diff(dest,WANT);
+    $("mmcmp").innerHTML = dest===WANT ? "Sí, idéntica" : "No coincide: los caracteres en rojo son distintos";
+    var v=$("verdict");
+    if(!inf){
+      v.className="verdict ok";
+      v.textContent="Script limpio: la dirección de MetaMask es la de tu factura. Todo correcto.";
+    } else if(c==="dom"){
+      v.className="verdict bad";
+      v.innerHTML="La web ya te mostraba la dirección del atacante. Si no la comparas con tu factura, MetaMask te pedirá confirmar una transacción válida hacia otra persona. Solo te salva comparar con una fuente que no sea esta página.";
+    } else if(c==="clip"){
+      v.className="verdict bad";
+      v.innerHTML="Copiaste la dirección correcta, pero el portapapeles ya contenía la del atacante. La pegaste en MetaMask sin notarlo. Pegar no es verificar: compara lo que acabas de pegar.";
+    } else {
+      v.className="verdict bad";
+      v.innerHTML="La pantalla mostraba la dirección correcta, pero la petición salió con la del atacante. La única pista está en la ventana de MetaMask. Es la última barrera, y solo funciona si la lees.";
+    }
+  });
+  $("reset").addEventListener("click",reset);
+  $("inf").addEventListener("change",reset);
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=ch]'),function(r){r.addEventListener("change",reset)});
+  render();
+
+  var Q=[
+    {q:"¿Qué se comprometió en este incidente?",
+     o:["Los servidores de cada marca afectada","Código JavaScript servido por un proveedor de confianza","La extensión MetaMask","La blockchain de Ethereum"],
+     a:1,w:"Las webs de las marcas no fueron hackeadas. El código malicioso llegó desde el proyecto de Optimizely, un tercero en el que confiaban."},
+    {q:"¿Puede ese script leer la frase semilla guardada en MetaMask?",
+     o:["Sí, está en el DOM de la página","Sí, a través del portapapeles","No, vive cifrada en la extensión, fuera del alcance de la página","Solo en iPhone"],
+     a:2,w:"La extensión corre en un contexto aislado. El riesgo que sí se documentó es el cambio de la dirección de destino."},
+    {q:"La web te muestra la dirección correcta, pero la petición de red lleva otra. ¿Dónde puedes detectarlo?",
+     o:["No se puede detectar","En la ventana de confirmación de MetaMask, comparando la dirección completa","En el candado HTTPS del navegador","En el saldo de la wallet antes de enviar"],
+     a:1,w:"El candado no ayuda: el certificado es válido. La confirmación de la wallet es la última comprobación."},
+    {q:"¿Qué medida de CSP habría ayudado menos?",
+     o:["Permitir solo cdn.optimizely.com en script-src","Cerrar connect-src","Quitar unsafe-eval","Cerrar frame-src"],
+     a:0,w:"El script malicioso se servía desde ese mismo dominio de confianza, así que permitirlo no lo bloquea."}
+  ];
+  var box=$("quizbox");
+  Q.forEach(function(item,qi){
+    var d=document.createElement("div"); d.className="q";
+    var p=document.createElement("p"); p.textContent=(qi+1)+". "+item.q; d.appendChild(p);
+    var why=document.createElement("div"); why.className="why"; why.textContent=item.w;
+    var btns=[];
+    item.o.forEach(function(t,oi){
+      var b=document.createElement("button"); b.type="button"; b.textContent=t;
+      b.addEventListener("click",function(){
+        btns.forEach(function(x,xi){
+          x.disabled=true;
+          if(xi===item.a) x.className="right"; else if(xi===oi) x.className="wrong";
+        });
+        why.style.display="block";
+      });
+      btns.push(b); d.appendChild(b);
+    });
+    d.appendChild(why); box.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>

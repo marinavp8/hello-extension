@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Análisis de Optimizely</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: columna de lectura de 880px, secciones separadas por filetes, tarjetas solo donde se comparan elementos */
+:root{
+  --bg:#f5f6f8;
+  --surface:#ffffff;
+  --ink:#151a24;
+  --muted:#586174;
+  --line:#dde1e8;
+  --accent:#2a45d4;
+  --accent-soft:#e6eafc;
+  --signal:#c8500a;
+  --signal-soft:#fbeadf;
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f131b;--surface:#171c27;--ink:#e8ebf2;--muted:#9aa3b6;--line:#2a3142;
+    --accent:#8ea0ff;--accent-soft:#1f2745;--signal:#ff9a5c;--signal-soft:#3a2416;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f131b;--surface:#171c27;--ink:#e8ebf2;--muted:#9aa3b6;--line:#2a3142;
+  --accent:#8ea0ff;--accent-soft:#1f2745;--signal:#ff9a5c;--signal-soft:#3a2416;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 var(--font-body)}
+.wrap{max-width:880px;margin:0 auto;padding:0 20px}
+header{padding:48px 0 28px;border-bottom:1px solid var(--line)}
+.kicker{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+h1{font:700 clamp(34px,6vw,56px)/1.05 var(--font-display);margin:0 0 16px;text-wrap:balance}
+.lede{font-size:19px;max-width:62ch;margin:0;color:var(--ink)}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+nav.toc a{font-size:14px;color:var(--accent);text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:5px 12px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);outline:none}
+section{padding:40px 0;border-bottom:1px solid var(--line)}
+section:last-of-type{border-bottom:0}
+h2{font:700 28px/1.15 var(--font-display);margin:0 0 6px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 22px;max-width:62ch}
+p{max-width:68ch}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 18px 16px}
+.card h3{font:700 19px/1.2 var(--font-display);margin:0 0 6px}
+.card p{margin:0 0 10px;font-size:15px}
+.card .cta{font-size:13px;color:var(--muted);margin:0}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--accent-soft);color:var(--accent);margin-bottom:10px}
+.tag.s{background:var(--signal-soft);color:var(--signal)}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.flow div{padding:14px 16px;border-right:1px solid var(--line);font-size:14px}
+.flow div:last-child{border-right:0}
+.flow b{display:block;font:700 16px var(--font-display);margin-bottom:2px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:15px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:0}
+td.num{font:700 20px var(--font-display);color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 18px;padding:0;list-style:none}
+.pills li{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:14px}
+h4{font:700 14px var(--font-body);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:22px 0 4px}
+.cols{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.cols ul{margin:0;padding-left:18px}
+.cols li{margin-bottom:8px;font-size:15px}
+.note{border-left:3px solid var(--signal);background:var(--signal-soft);padding:12px 16px;border-radius:0 8px 8px 0;font-size:15px;max-width:68ch}
+footer{padding:28px 0 56px;color:var(--muted);font-size:14px}
+footer a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:560px){.flow div{border-right:0;border-bottom:1px solid var(--line)}.flow div:last-child{border-bottom:0}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Análisis de optimizely.com · 23 nov 2026</p>
+  <h1>Qué hace Optimizely</h1>
+  <p class="lede">Vende una plataforma de experiencia digital (gestión de contenido, experimentación, personalización y comercio) y ahora la presenta como una plataforma de IA con agentes que automatizan el trabajo de los equipos de marketing y producto.</p>
+  <nav class="toc" aria-label="Secciones">
+    <a href="#resumen">Resumen</a>
+    <a href="#productos">Productos</a>
+    <a href="#audiencias">Tres audiencias</a>
+    <a href="#clientes">Clientes y pruebas</a>
+    <a href="#mensaje">Mensaje y CTAs</a>
+    <a href="#lectura">Lectura crítica</a>
+    <a href="#incidente">Incidente de seguridad</a>
+  </nav>
+</header>
+
+<section id="resumen">
+  <h2>Resumen en cuatro líneas</h2>
+  <p class="sub">Lo que la portada dice de sí misma, ordenado.</p>
+  <div class="grid g2">
+    <div class="card"><span class="tag">Qué es</span><p>Una plataforma de software (DXP) con la que una empresa crea, publica, prueba y optimiza sus experiencias digitales: web, apps y comercio.</p></div>
+    <div class="card"><span class="tag">Para quién</span><p>Equipos de marketing, de producto y desarrolladores de empresas medianas y grandes. Lo respaldan marcas como Nike, Visa, Santander o Toyota Motor Europe.</p></div>
+    <div class="card"><span class="tag">Promesa</span><p>«You're free to grow»: menos trabajo operativo, más tiempo para creatividad y estrategia, y poder demostrar el impacto en negocio.</p></div>
+    <div class="card"><span class="tag s">Giro actual</span><p>La portada pone la IA agéntica al frente: Agentic CMS, Agentic Experimentation y Agent Platform, además de optimizar contenido para que lo lean los modelos de lenguaje.</p></div>
+  </div>
+</section>
+
+<section id="productos">
+  <h2>Qué vende</h2>
+  <p class="sub">La portada actual destaca tres líneas con IA. Por debajo sigue el catálogo clásico de la plataforma.</p>
+
+  <h4>En la portada</h4>
+  <div class="grid g3">
+    <div class="card"><h3>Agentic CMS</h3><p>Gestor de contenido para publicar más rápido y mantener el sitio con buen rendimiento de forma automatizada.</p><p class="cta">Botón: «Let's build»</p></div>
+    <div class="card"><h3>Agentic Experimentation</h3><p>Probar, personalizar y optimizar de forma continua, midiendo el impacto de cada cambio.</p><p class="cta">Botón: «Let's test»</p></div>
+    <div class="card"><h3>Agent Platform</h3><p>Agentes de IA que automatizan tareas, quitan cuellos de botella y permiten escalar sin ampliar plantilla.</p><p class="cta">Botón: «Let's automate»</p></div>
+  </div>
+
+  <h4>Catálogo de fondo</h4>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Producto</th><th>Para qué sirve</th></tr></thead>
+      <tbody>
+        <tr><td><b>Content Marketing Platform</b></td><td>Planificar, crear y optimizar contenido y campañas.</td></tr>
+        <tr><td><b>Content Management System</b></td><td>Gestionar sitios web rápidos y extensibles. Es la base del resto de la plataforma.</td></tr>
+        <tr><td><b>Web Experimentation</b></td><td>Configurar tests A/B de forma visual y optimizar sitios.</td></tr>
+        <tr><td><b>Feature Experimentation</b></td><td>Probar funcionalidades dentro del código del producto.</td></tr>
+        <tr><td><b>Personalization</b></td><td>Mostrar contenido y productos distintos según el comportamiento del visitante.</td></tr>
+        <tr><td><b>Commerce</b></td><td>Tienda online B2C y B2B con experiencia de compra adaptada.</td></tr>
+        <tr><td><b>Data Platform</b></td><td>Unificar datos de cliente para activar segmentación y personalización.</td></tr>
+        <tr><td><b>Opal</b></td><td>Capa de IA de la plataforma, presentada en la página de soluciones.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Cómo encaja</h4>
+  <div class="flow" role="img" aria-label="Flujo de la idea a la experiencia: crear, publicar, probar, personalizar, medir">
+    <div><b>Crear</b>Contenido y campañas</div>
+    <div><b>Publicar</b>CMS y comercio</div>
+    <div><b>Probar</b>A/B y funcionalidades</div>
+    <div><b>Personalizar</b>Por segmento y datos</div>
+    <div><b>Medir</b>Impacto en negocio</div>
+  </div>
+  <p class="sub" style="margin-top:12px">Su propia página de soluciones lo describe como un flujo continuo del brief a la experiencia en vivo, sin cambiar de herramienta.</p>
+</section>
+
+<section id="audiencias">
+  <h2>Tres caminos hacia el crecimiento</h2>
+  <p class="sub">La portada segmenta el mensaje por tipo de experiencia, no por producto.</p>
+  <div class="grid g3">
+    <div class="card"><h3>Marketer Experience</h3><p>Liberar al equipo de marketing del trabajo administrativo, hacer más y demostrar su impacto.</p></div>
+    <div class="card"><h3>Customer Experience</h3><p>Ofrecer a cada cliente experiencias más relevantes, con foco en crecer en ingresos.</p></div>
+    <div class="card"><h3>Agent Experience</h3><p>Medir y optimizar cómo los modelos de lenguaje (LLM) consumen el contenido de la marca.</p></div>
+  </div>
+  <p style="margin-top:16px">El tercer camino es el más novedoso: trata a las IA como un público más, junto a personas y equipos internos.</p>
+</section>
+
+<section id="clientes">
+  <h2>Clientes y pruebas que muestra</h2>
+  <p class="sub">La portada afirma contar con la confianza de más de 10.000 marcas.</p>
+
+  <h4>Logos destacados</h4>
+  <ul class="pills">
+    <li>Nike</li><li>Zoom</li><li>Salesforce</li><li>Visa</li><li>Santander</li><li>Docusign</li><li>Mailchimp</li><li>Calendly</li><li>Toyota Motor Europe</li><li>Sky</li><li>Virgin Mobile O2</li><li>Admiral</li><li>L'Oréal</li><li>Tapestry</li><li>Royal Canin</li><li>The Royal Mint</li>
+  </ul>
+
+  <h4>Casos de éxito</h4>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Cliente</th><th>Resultado</th><th>Qué mide</th></tr></thead>
+      <tbody>
+        <tr><td><b>The Royal Mint</b></td><td class="num">+50%</td><td>Aumento de conversión</td></tr>
+        <tr><td><b>Cox Automotive</b></td><td class="num">400+ h</td><td>Horas de trabajo ahorradas</td></tr>
+        <tr><td><b>L'Oréal (Luxe)</b></td><td class="num">200+</td><td>Experimentos al año</td></tr>
+        <tr><td><b>Diligent</b></td><td class="num">Decenas de miles $</td><td>Ahorro de costes</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sub" style="margin-top:12px">Los sectores se reparten entre servicios financieros y seguros, consumo y lujo, automoción, logística y software.</p>
+</section>
+
+<section id="mensaje">
+  <h2>Mensaje, navegación y llamadas a la acción</h2>
+  <p class="sub">Cómo guía la portada a quien llega.</p>
+  <div class="cols">
+    <div>
+      <h4>Mensajes repetidos</h4>
+      <ul>
+        <li>La IA como motor para crear y optimizar experiencias.</li>
+        <li>Menos trabajo operativo, más creatividad y estrategia.</li>
+        <li>Demostrar el impacto con datos.</li>
+        <li>Escalar sin depender de más personal.</li>
+        <li>Integración con las herramientas que ya usas.</li>
+        <li>No es solo A/B testing: es una plataforma completa.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Llamadas a la acción</h4>
+      <ul>
+        <li><b>Let's grow</b> (principal, lleva a Get started)</li>
+        <li><b>Let's build / test / automate</b> (una por producto)</li>
+        <li><b>Try and stop me</b> (sección de agentes de IA)</li>
+        <li><b>Take me to the platform</b></li>
+        <li><b>See all integrations</b></li>
+      </ul>
+      <h4>Menú superior</h4>
+      <p style="margin:0;font-size:15px">Products, Solutions, Resources, Plans, Developers, Partners, Login, Get started.</p>
+    </div>
+  </div>
+  <p style="margin-top:18px">El tono es informal y directo, con verbos en primera persona. Contrasta con el perfil corporativo de sus clientes.</p>
+</section>
+
+<section id="lectura">
+  <h2>Lectura crítica</h2>
+  <p class="sub">Interpretación a partir de lo anterior, no afirmaciones de la empresa.</p>
+  <div class="cols">
+    <div>
+      <h4>Puntos fuertes</h4>
+      <ul>
+        <li><b>Cobertura completa.</b> Cubre contenido, pruebas, personalización y comercio en una sola plataforma, algo poco habitual entre las herramientas de experimentación puras.</li>
+        <li><b>Prueba social sólida.</b> Combina logos globales con cifras concretas por caso.</li>
+        <li><b>Posición temprana en IA para agentes.</b> La «Agent Experience» anticipa un canal nuevo de descubrimiento.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Dudas razonables</h4>
+      <ul>
+        <li><b>Mucho vocabulario de moda.</b> «Agentic» y «agent» aparecen en casi todos los nombres, y la portada da pocos detalles de qué hace cada agente.</li>
+        <li><b>Resultados sin contexto.</b> Los casos no indican base de comparación ni plazos.</li>
+        <li><b>Catálogo cambiante.</b> Los nombres de producto han cambiado varias veces (de Episerver a Optimizely, de Content Cloud a CMS), lo que dificulta comparar con documentación antigua.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note" style="margin-top:22px">Limitación: el texto de la portada se obtuvo con una herramienta de lectura que repetía varios bloques. El catálogo de fondo se contrastó con el archivo llms.txt de Optimizely y con su página de soluciones. No se revisaron precios ni la página de planes.</div>
+</section>
+
+<section id="incidente">
+  <h2>Nota: incidente de seguridad de noviembre de 2026</h2>
+  <p class="sub">Afecta a Web Experimentation, uno de los productos descritos arriba. Datos a 23 de noviembre; la situación puede cambiar.</p>
+  <div class="note"><b>Resumen.</b> El 16 de noviembre un atacante explotó un fallo en el alta de cuentas de Web Experimentation, suplantó a usuarios de cuentas concretas e insertó JavaScript malicioso en sus proyectos. El código llegó a visitantes de 178 organizaciones.</div>
+  <div class="cols" style="margin-top:18px">
+    <div>
+      <h4>Lo que se sabe</h4>
+      <ul>
+        <li>Los sitios afectados no fueron hackeados directamente: el script se servía desde el dominio de Optimizely, con su certificado, y los navegadores lo trataban como legítimo.</li>
+        <li>Entre los afectados se citan BBC, CNN, Zoom, GitLab, Salesforce, Equifax, HSBC e IKEA.</li>
+        <li>Según los análisis publicados, el código servía skimmers de tarjetas, sustitutores de direcciones de wallets cripto y exploits para iOS. Se rastrearon al menos 7.000 dólares robados.</li>
+        <li>Los snippets de optimizely.com y login.optimizely.com también llevaron el cargador.</li>
+        <li>Salesforce desactivó por precaución los scripts de Optimizely en vista previa y producción.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Lo que dice Optimizely</h4>
+      <ul>
+        <li>Detectó la actividad el mismo día, bloqueó la entrega del código y cerró la vulnerabilidad en tres horas desde la detección.</li>
+        <li>Retiró el código inyectado de todos los proyectos afectados.</li>
+        <li>Afirma que no fue una brecha de credenciales, que se limitó a Web Experimentation y que afectó a menos del 5% de sus clientes.</li>
+        <li>Su página de estado aún listaba el incidente como sin resolver dos días después del ataque.</li>
+      </ul>
+    </div>
+  </div>
+  <h4>Qué revisar si usas Optimizely</h4>
+  <ul>
+    <li>Preguntar al proveedor si tu proyecto estuvo entre los afectados y qué cambios se hicieron en esas fechas.</li>
+    <li>Comprobar si tienes políticas CSP o integridad de subrecursos para scripts de terceros.</li>
+    <li>Revisar el tráfico y los pagos de las páginas que cargan el snippet entre el 16 y el 17 de noviembre.</li>
+  </ul>
+  <p class="sub">Fuentes: <a href="https://support.optimizely.com/hc/en-us/articles/50521849710605-Security-Advisory-Web-Experimentation-Security-Incident-Updated-November-19-2026">aviso de Optimizely</a>, <a href="https://krebsonsecurity.com/2026/11/attackers-used-optimizely-to-a-b-test-malware-on-top-websites/">Krebs on Security</a>, <a href="https://www.securityweek.com/optimizely-vulnerability-exploited-to-serve-malware-on-major-websites/">SecurityWeek</a>, <a href="https://www.stepsecurity.io/blog/optimjack-optimizely-hosted-scripts-crypto-clipper-card-skimmer">StepSecurity</a>, <a href="https://thehackernews.com/2026/11/hijacked-optimizely-scripts-served-card.html">The Hacker News</a>.</p>
+</section>
+
+<footer>
+  <p>Fuentes: <a href="https://www.optimizely.com/">optimizely.com</a>, <a href="https://www.optimizely.com/solutions">optimizely.com/solutions</a>, <a href="https://optimizely.com/llms.txt">optimizely.com/llms.txt</a>, <a href="https://www.optimizely.com/about/company/overview/">página «About»</a>.</p>
+</footer>
+
+</div>
+</body>
+</html>

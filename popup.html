@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { width: 400px; padding: 14px; font-family: system-ui, sans-serif; font-size: 13px; }
+    h1 { font-size: 18px; margin: 0 0 10px; text-align: center; }
+    h2 { font-size: 13px; margin: 14px 0 6px; }
+    input, select { width: 100%; box-sizing: border-box; padding: 5px; font-size: 12px; margin-bottom: 6px; }
+    input.mono { font-family: monospace; }
+    button { font-size: 13px; padding: 5px 12px; cursor: pointer; }
+    .row { display: flex; gap: 6px; }
+    .row > * { flex: 1; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    td { padding: 3px 4px; border-bottom: 1px solid #eee; }
+    td.addr { font-family: monospace; }
+    td.bal { text-align: right; white-space: nowrap; }
+    .msg { margin-top: 6px; word-break: break-all; }
+    .msg.error { color: #b91c1c; }
+    .msg.ok { color: #15803d; }
+    [hidden] { display: none !important; }
+    .hint { color: #666; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <h1>Anvil</h1>
+
+  <h2>Mnemónico</h2>
+  <div id="setup">
+    <input id="mnemonic" class="mono" type="text" spellcheck="false" placeholder="12 palabras">
+    <input id="newPassword" type="password" placeholder="Contraseña (mín. 8 caracteres)" autocomplete="new-password">
+    <button id="saveMnemonic">Cifrar y guardar</button>
+    <div class="hint">Se guarda cifrado (AES-GCM, clave PBKDF2) en chrome.storage.local. Pensado para mnemónicos de desarrollo.</div>
+  </div>
+  <div id="unlock" hidden>
+    <input id="password" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="row">
+      <button id="unlockBtn">Desbloquear</button>
+      <button id="wipeBtn">Borrar mnemónico</button>
+    </div>
+  </div>
+  <div id="unlocked" hidden>
+    <button id="lockBtn">Bloquear</button>
+  </div>
+  <div id="mnemonicMsg" class="msg"></div>
+
+  <div id="main" hidden>
+  <h2>Cuentas</h2>
+  <table id="accounts"></table>
+  <button id="refresh" style="margin-top:6px">Actualizar saldos</button>
+
+  <h2>Enviar fondos</h2>
+  <select id="from"></select>
+  <input id="to" class="mono" list="toList" placeholder="Destino (elige una cuenta o pega una address)" spellcheck="false">
+  <datalist id="toList"></datalist>
+  <div class="row">
+    <input id="amount" type="text" inputmode="decimal" placeholder="Cantidad en ETH">
+    <button id="send">Enviar</button>
+  </div>
+  <div id="sendMsg" class="msg"></div>
+
+  </div>
+
+  <script src="ethers.umd.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

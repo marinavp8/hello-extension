@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partes de una extensión de Chrome</title>
+<style>
+  /* Plan: fondo azul pizarra oscuro, un acento ámbar para el mensaje en vuelo,
+     un color por contexto de ejecución. Escena SVG arriba, subtítulo y código debajo. */
+  :root {
+    color-scheme: dark;
+    --bg: #0f1620;
+    --panel: #172230;
+    --line: #2b3b4e;
+    --text: #e6edf5;
+    --muted: #8fa3b8;
+    --accent: #ffb43b;
+    --c-popup: #4ea1ff;
+    --c-sw: #9b7bff;
+    --c-cs: #3ecf8e;
+    --c-page: #ff7a6b;
+    --c-store: #5fd0d6;
+    --display: "Space Mono", ui-monospace, Menlo, Consolas, monospace;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); }
+  body { padding: 24px 16px 40px; }
+  main { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  h1 { font-family: var(--display); font-size: clamp(1.25rem, 3.5vw, 1.7rem); margin: 0; text-wrap: balance; font-weight: 700; }
+  .sub { color: var(--muted); margin: 6px 0 0; max-width: 62ch; line-height: 1.5; }
+  .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+  svg { width: 100%; height: auto; display: block; }
+  .link { stroke: var(--line); stroke-width: 2; stroke-dasharray: 5 6; fill: none; }
+  .link.on { stroke: var(--accent); }
+  .node rect { fill: var(--bg); stroke-width: 2; transition: fill .25s; }
+  .node.active rect { fill: #1d2c3e; }
+  .node text { font-family: var(--body); fill: var(--text); text-anchor: middle; }
+  .node .t { font-size: 15px; font-weight: 600; }
+  .node .s { font-size: 11.5px; fill: var(--muted); }
+  .node .halo { fill: none; stroke-width: 2; opacity: 0; }
+  .node.active .halo { opacity: .55; }
+  .tag { font-family: var(--display); font-size: 11px; fill: var(--muted); text-anchor: middle; }
+  .packet circle { fill: var(--accent); }
+  .packet text { font-family: var(--display); font-size: 11px; fill: #1b1200; text-anchor: middle; font-weight: 700; }
+  .caption { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
+  .stepno { font-family: var(--display); font-size: 12px; color: var(--accent); }
+  .caption p { margin: 0; line-height: 1.5; min-height: 3em; }
+  pre { margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: var(--display); font-size: 13px; overflow-x: auto; color: var(--text); min-height: 3.2em; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .dots { display: flex; gap: 6px; margin-left: auto; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .dot.done { background: var(--muted); }
+  .dot.now { background: var(--accent); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+  .guide { display: flex; flex-direction: column; gap: 22px; border-top: 1px solid var(--line); padding-top: 28px; }
+  .guide h2 { font-family: var(--display); font-size: 1.25rem; margin: 0; text-wrap: balance; }
+  .guide h3 { font-size: 1.05rem; margin: 0 0 8px; text-wrap: balance; }
+  .guide p, .guide li { line-height: 1.55; max-width: 70ch; }
+  .guide p { margin: 0 0 10px; }
+  .guide ul, .guide ol { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 6px; }
+  .guide section { display: block; }
+  .guide code { font-family: var(--display); font-size: .88em; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  .guide pre code { border: 0; padding: 0; background: none; font-size: inherit; }
+  .guide pre { margin: 6px 0 12px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 520px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .bad { color: var(--c-page); }
+  .flow { font-family: var(--display); font-size: 12.5px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; white-space: pre; margin: 6px 0 12px; }
+  .risk { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 16px; }
+  .risk h3 { margin-bottom: 6px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; background: var(--c); vertical-align: -1px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Cómo se hablan las partes de una extensión</h1>
+    <p class="sub">Cada parte corre aislada y solo se comunica por mensajes. Sigue el recorrido de un clic en el popup hasta el almacenamiento.</p>
+  </header>
+
+  <div class="stage">
+    <svg viewBox="0 0 800 400" role="img" aria-label="Diagrama animado: popup, content script, página web, service worker y storage intercambiando mensajes">
+      <g id="links">
+        <path class="link" id="l-popup-cs" d="M215 100 H315"/>
+        <path class="link" id="l-cs-page" d="M485 100 H585"/>
+        <path class="link" id="l-popup-sw" d="M130 135 V265"/>
+        <path class="link" id="l-sw-store" d="M215 300 H315"/>
+      </g>
+
+      <g class="node" id="popup" style="--c:var(--c-popup)">
+        <rect class="halo" x="36" y="62" width="188" height="76" rx="12" stroke="var(--c-popup)"/>
+        <rect x="45" y="68" width="170" height="64" rx="10" stroke="var(--c-popup)"/>
+        <text class="t" x="130" y="95">Popup</text>
+        <text class="s" x="130" y="115">popup.html + popup.js</text>
+      </g>
+      <g class="node" id="cs" style="--c:var(--c-cs)">
+        <rect class="halo" x="311" y="62" width="188" height="76" rx="12" stroke="var(--c-cs)"/>
+        <rect x="320" y="68" width="170" height="64" rx="10" stroke="var(--c-cs)"/>
+        <text class="t" x="405" y="95">Content script</text>
+        <text class="s" x="405" y="115">content.js</text>
+      </g>
+      <g class="node" id="page" style="--c:var(--c-page)">
+        <rect class="halo" x="586" y="62" width="188" height="76" rx="12" stroke="var(--c-page)"/>
+        <rect x="595" y="68" width="170" height="64" rx="10" stroke="var(--c-page)"/>
+        <text class="t" x="680" y="95">Página web</text>
+        <text class="s" x="680" y="115">DOM de la pestaña</text>
+      </g>
+      <g class="node" id="sw" style="--c:var(--c-sw)">
+        <rect class="halo" x="36" y="262" width="188" height="76" rx="12" stroke="var(--c-sw)"/>
+        <rect x="45" y="268" width="170" height="64" rx="10" stroke="var(--c-sw)"/>
+        <text class="t" x="130" y="295">Service worker</text>
+        <text class="s" x="130" y="315">background.js</text>
+      </g>
+      <g class="node" id="store" style="--c:var(--c-store)">
+        <rect class="halo" x="311" y="262" width="188" height="76" rx="12" stroke="var(--c-store)"/>
+        <rect x="320" y="268" width="170" height="64" rx="10" stroke="var(--c-store)"/>
+        <text class="t" x="405" y="295">chrome.storage</text>
+        <text class="s" x="405" y="315">datos persistentes</text>
+      </g>
+
+      <text class="tag" x="265" y="88">runtime / tabs</text>
+      <text class="tag" x="535" y="88">DOM</text>
+      <text class="tag" x="130" y="205" transform="rotate(0)">runtime.sendMessage</text>
+      <text class="tag" x="265" y="288">storage API</text>
+
+      <text class="tag" x="620" y="300" style="text-anchor:start">manifest.json declara</text>
+      <text class="tag" x="620" y="318" style="text-anchor:start">permisos y qué se carga</text>
+
+      <g class="packet" id="packet" transform="translate(130 100)">
+        <circle r="13"/>
+        <text y="4">✉</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="caption" aria-live="polite">
+    <span class="stepno" id="stepno"></span>
+    <p id="msg"></p>
+    <pre id="code"></pre>
+    <div class="controls">
+      <button id="play" type="button">Pausar</button>
+      <button id="prev" type="button">Anterior</button>
+      <button id="next" type="button">Siguiente</button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span style="--c:var(--c-popup)">Página de extensión</span>
+    <span style="--c:var(--c-sw)">Service worker</span>
+    <span style="--c:var(--c-cs)">Mundo aislado en la web</span>
+    <span style="--c:var(--c-page)">Página</span>
+    <span style="--c:var(--c-store)">Almacenamiento</span>
+  </div>
+
+  <article class="guide">
+    <h2>Seguridad: componentes e inyección en la pestaña</h2>
+
+    <section>
+      <h3>1. Modelo de confianza</h3>
+      <p>Cada parte tiene un nivel de privilegio distinto. Una extensión se rompe cuando algo con poco privilegio consigue que algo con mucho privilegio actúe en su nombre (el problema del <em>confused deputy</em>).</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Componente</th><th>Privilegio</th><th>Confianza</th></tr></thead>
+          <tbody>
+            <tr><td>Service worker, popup, options</td><td>Acceso completo a <code>chrome.*</code> según permisos</td><td>Alta (tu código)</td></tr>
+            <tr><td>Content script</td><td>DOM de la web y poco de <code>chrome.*</code> (<code>runtime</code>, <code>storage</code>)</td><td>Media</td></tr>
+            <tr><td>Código en el mundo <code>MAIN</code></td><td>Ninguno propio, comparte JS con la web</td><td class="bad">Nula</td></tr>
+            <tr><td>Página web</td><td>Controlada por terceros</td><td class="bad">Hostil por defecto</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h3>2. Mundos aislados (isolated worlds)</h3>
+      <p>El content script comparte el DOM con la página, pero no el entorno JavaScript: cada uno tiene su propio <code>window</code>, variables globales y prototipos.</p>
+      <ul>
+        <li>La página no puede leer variables del content script ni llamar a sus funciones.</li>
+        <li>El content script no ve las globales de la página.</li>
+        <li>Ambos modifican el mismo árbol DOM, y por ahí pasa el canal de ataque más habitual.</li>
+        <li>Protege a la extensión de que la web sobrescriba <code>Array.prototype.push</code> o <code>JSON.parse</code>.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>3. Formas de inyectar código en una pestaña</h3>
+      <p><strong>Declarativa, en el manifest:</strong></p>
+      <pre><code>"content_scripts": [{
+  "matches": ["https://ejemplo.com/*"],
+  "js": ["content.js"],
+  "run_at": "document_start",
+  "world": "ISOLATED"
+}]</code></pre>
+      <p><strong>Programática, con <code>chrome.scripting</code></strong> (permiso <code>scripting</code> más <code>host_permissions</code> o <code>activeTab</code>):</p>
+      <pre><code>await chrome.scripting.executeScript({
+  target: { tabId },
+  files: ["content.js"],
+  world: "ISOLATED"   // o "MAIN"
+});</code></pre>
+      <p><strong>Dinámica y persistente:</strong> <code>chrome.scripting.registerContentScripts([...])</code>.</p>
+      <p>El parámetro <code>world</code> es la decisión de seguridad más importante. <code>ISOLATED</code> (por defecto) es seguro frente a la web. <code>MAIN</code> corre en el mismo contexto que los scripts de la página, así que cualquier script de la web puede leer, sustituir o secuestrar lo que pongas ahí.</p>
+    </section>
+
+    <section>
+      <h3>4. Cómo se inyecta un objeto en <code>window</code> de la página</h3>
+      <p>Es el patrón de las wallets (como <code>window.ethereum</code>) y de cualquier extensión que expone una API a la web. El objeto debe vivir en el mundo <code>MAIN</code>, porque desde <code>ISOLATED</code> la página no lo vería.</p>
+      <p><strong>Opción moderna (MV3), con <code>world: "MAIN"</code> en el manifest:</strong></p>
+      <pre><code>"content_scripts": [
+  { "matches": ["https://*/*"], "js": ["inpage.js"],  "world": "MAIN",     "run_at": "document_start" },
+  { "matches": ["https://*/*"], "js": ["content.js"], "world": "ISOLATED", "run_at": "document_start" }
+]</code></pre>
+      <p><strong>Opción clásica, insertando un <code>&lt;script&gt;</code> desde el content script:</strong></p>
+      <pre><code>// content.js (ISOLATED)
+const s = document.createElement("script");
+s.src = chrome.runtime.getURL("inpage.js");
+s.onload = () =&gt; s.remove();
+(document.head || document.documentElement).appendChild(s);</code></pre>
+      <p><code>inpage.js</code> debe estar en <code>web_accessible_resources</code>. No sirve <code>textContent</code> con páginas de CSP estricta, y MV3 prohíbe código remoto.</p>
+      <p><strong>El puente entre los dos mundos.</strong> El objeto inyectado no tiene acceso a <code>chrome.*</code>, así que necesita un puente con <code>postMessage</code>:</p>
+      <div class="flow">Página / inpage.js (MAIN)  ⇄  content.js (ISOLATED)  ⇄  service worker
+        window.postMessage        chrome.runtime.sendMessage</div>
+      <pre><code>// inpage.js (MAIN)
+window.miApi = Object.freeze({
+  pedir: (datos) =&gt; new Promise((resolve) =&gt; {
+    const id = crypto.randomUUID();
+    const onMsg = (e) =&gt; {
+      if (e.source !== window || e.data?.target !== "page" || e.data.id !== id) return;
+      window.removeEventListener("message", onMsg);
+      resolve(e.data.payload);
+    };
+    window.addEventListener("message", onMsg);
+    window.postMessage({ target: "extension", id, datos }, window.location.origin);
+  })
+});</code></pre>
+      <pre><code>// content.js (ISOLATED)
+window.addEventListener("message", async (e) =&gt; {
+  if (e.source !== window || e.data?.target !== "extension") return;
+  const payload = await chrome.runtime.sendMessage({ type: "API_CALL", datos: e.data.datos });
+  window.postMessage({ target: "page", id: e.data.id, payload }, window.location.origin);
+});</code></pre>
+    </section>
+
+    <section>
+      <h3>5. Riesgos principales y defensas</h3>
+      <div style="display:grid;gap:12px">
+        <div class="risk">
+          <h3>El mundo MAIN es territorio hostil</h3>
+          <ul>
+            <li>Cualquier script de la web (anuncios, librerías de terceros) puede reemplazar o envolver tu objeto. <code>Object.freeze</code> ayuda, pero no garantiza nada.</li>
+            <li>No pongas secretos, tokens ni lógica de autorización en <code>inpage.js</code>. Que sea solo una fachada fina.</li>
+            <li>No confíes en las funciones nativas (<code>JSON</code>, <code>Array</code>, <code>fetch</code>) dentro de <code>MAIN</code>: la página puede haberlas modificado antes que tú.</li>
+          </ul>
+        </div>
+        <div class="risk">
+          <h3>El puente postMessage se puede falsificar</h3>
+          <ul>
+            <li>Cualquier script de la web puede enviar mensajes con la misma forma que los tuyos.</li>
+            <li>Valida siempre <code>e.source === window</code> y el formato, y usa un <code>targetOrigin</code> explícito, nunca <code>"*"</code>.</li>
+            <li>Trata todo lo que llega como entrada no confiable: valida tipos, longitud y valores permitidos.</li>
+          </ul>
+        </div>
+        <div class="risk">
+          <h3>Confused deputy en el service worker</h3>
+          <ul>
+            <li>Si el content script reenvía sin filtrar, la web puede lograr que el service worker, con más permisos, haga cosas por ella.</li>
+            <li>Usa una lista cerrada de acciones (<code>type</code>) y nada genérico del tipo "haz fetch a esta URL".</li>
+            <li>Las acciones sensibles (firmar, pagar, enviar datos) piden confirmación en una interfaz que la web no controle, como un popup o una ventana de la extensión.</li>
+          </ul>
+          <pre><code>chrome.runtime.onMessage.addListener((msg, sender, sendResponse) =&gt; {
+  if (sender.id !== chrome.runtime.id) return;   // solo mi extensión
+  if (!sender.tab) return;                       // espera un content script
+  const origin = new URL(sender.url).origin;
+  if (!ORIGENES_PERMITIDOS.has(origin)) return;
+  // ...
+});</code></pre>
+        </div>
+        <div class="risk">
+          <h3>XSS dentro del content script</h3>
+          <ul>
+            <li>Nunca uses <code>innerHTML</code> con datos de la página o de la red. Usa <code>textContent</code> o <code>createElement</code>.</li>
+            <li>Para tu propia interfaz inyectada usa Shadow DOM (<code>mode: "closed"</code>), para que estilos y scripts de la web no la alteren.</li>
+          </ul>
+        </div>
+        <div class="risk">
+          <h3>Superficie extra que añades tú</h3>
+          <ul>
+            <li><code>web_accessible_resources</code>: cada archivo listado puede ser cargado por la web y delata que tu extensión está instalada. Limita por <code>matches</code> y lista solo lo imprescindible.</li>
+            <li><code>externally_connectable</code>: permite que ciertas webs hablen con tu service worker. Úsalo solo con dominios concretos.</li>
+            <li><code>host_permissions</code> amplios (<code>&lt;all_urls&gt;</code>): si comprometen la extensión, acceden a todo. Mejor <code>activeTab</code> u <code>optional_host_permissions</code> pedidos en el momento.</li>
+          </ul>
+        </div>
+        <div class="risk">
+          <h3>Defensas que ya trae MV3</h3>
+          <ul>
+            <li>CSP por defecto: sin <code>eval</code>, sin scripts inline y sin código remoto en las páginas de la extensión.</li>
+            <li>Todo el código va empaquetado y se revisa, sin descargar JS de un servidor.</li>
+          </ul>
+        </div>
+        <div class="risk">
+          <h3>Datos y cadena de suministro</h3>
+          <ul>
+            <li><code>chrome.storage</code> no está cifrado. No guardes contraseñas ni claves privadas en claro. Para datos temporales usa <code>storage.session</code> (en memoria).</li>
+            <li>Fija versiones de dependencias, usa lockfile, ejecuta <code>npm audit</code> y minimiza librerías: una dependencia comprometida corre con los permisos de tu extensión.</li>
+            <li>Activa 2FA en la cuenta de la Chrome Web Store: quien publique una actualización maliciosa llega a todos tus usuarios.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3>6. Checklist rápida</h3>
+      <ol>
+        <li>Permisos mínimos, y <code>activeTab</code> en lugar de hosts amplios cuando sea posible.</li>
+        <li>Content scripts en <code>ISOLATED</code>. Usa <code>MAIN</code> solo para exponer una API fina a la web.</li>
+        <li>Un objeto en <code>window</code> solo como fachada, sin secretos ni lógica sensible.</li>
+        <li>Valida <code>source</code>, <code>origin</code> y esquema en cada <code>postMessage</code> y <code>runtime.onMessage</code>.</li>
+        <li>Lista cerrada de acciones en el service worker y confirmación del usuario para las críticas.</li>
+        <li>Sin <code>innerHTML</code> con datos externos, y Shadow DOM para la UI inyectada.</li>
+        <li><code>web_accessible_resources</code> y <code>externally_connectable</code> restringidos por <code>matches</code>.</li>
+        <li>Nada sensible en <code>chrome.storage</code> sin cifrar, y dependencias auditadas.</li>
+      </ol>
+    </section>
+  </article>
+</main>
+
+<script>
+(function () {
+  var centers = {
+    popup: [130, 100], cs: [405, 100], page: [680, 100],
+    sw: [130, 300], store: [405, 300]
+  };
+  var linkOf = {
+    "popup-cs": "l-popup-cs", "cs-popup": "l-popup-cs",
+    "cs-page": "l-cs-page", "page-cs": "l-cs-page",
+    "popup-sw": "l-popup-sw", "sw-popup": "l-popup-sw",
+    "sw-store": "l-sw-store", "store-sw": "l-sw-store"
+  };
+  var steps = [
+    { from: "popup", to: "popup", label: "clic",
+      text: "El usuario pulsa el icono. Chrome abre el popup, que es una página HTML normal de la extensión.",
+      code: "// manifest.json\n\"action\": { \"default_popup\": \"popup.html\" }" },
+    { from: "popup", to: "cs", label: "GET_TITLE",
+      text: "El popup no puede tocar la web. Envía un mensaje al content script de la pestaña activa.",
+      code: "chrome.tabs.sendMessage(tab.id, { type: \"GET_TITLE\" });" },
+    { from: "cs", to: "page", label: "leer",
+      text: "El content script vive dentro de la página y sí accede al DOM, aunque en un mundo JS aislado.",
+      code: "const title = document.title;" },
+    { from: "page", to: "cs", label: "title",
+      text: "El DOM devuelve el valor. Para el content script es una lectura síncrona.",
+      code: "// title === \"Mi página\"" },
+    { from: "cs", to: "popup", label: "{title}",
+      text: "El content script responde al popup con sendResponse.",
+      code: "sendResponse({ title: document.title });" },
+    { from: "popup", to: "sw", label: "guardar",
+      text: "El popup se cierra al perder el foco, así que pide al service worker que guarde el dato.",
+      code: "chrome.runtime.sendMessage({ type: \"SAVE\", title });" },
+    { from: "sw", to: "store", label: "set()",
+      text: "El service worker escribe en chrome.storage. Es la memoria fiable, porque el worker se duerme y pierde las variables globales.",
+      code: "chrome.storage.local.set({ lastTitle: msg.title });" }
+  ];
+
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var MOVE = reduce ? 1 : 1100, HOLD = 2200;
+  var packet = document.getElementById("packet");
+  var dotsEl = document.getElementById("dots");
+  var i = 0, t0 = performance.now(), playing = true, pausedAt = 0;
+
+  steps.forEach(function () {
+    var d = document.createElement("span"); d.className = "dot"; dotsEl.appendChild(d);
+  });
+
+  function ease(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+
+  function setStep(n) {
+    i = (n + steps.length) % steps.length;
+    var s = steps[i];
+    document.getElementById("stepno").textContent = "Paso " + (i + 1) + " de " + steps.length;
+    document.getElementById("msg").textContent = s.text;
+    document.getElementById("code").textContent = s.code;
+    document.querySelectorAll(".node").forEach(function (n) { n.classList.remove("active"); });
+    document.querySelectorAll(".link").forEach(function (l) { l.classList.remove("on"); });
+    document.getElementById(s.from).classList.add("active");
+    document.getElementById(s.to).classList.add("active");
+    var lk = linkOf[s.from + "-" + s.to];
+    if (lk) document.getElementById(lk).classList.add("on");
+    packet.querySelector("text").textContent = s.label.length > 3 ? "" : s.label;
+    Array.prototype.forEach.call(dotsEl.children, function (d, k) {
+      d.className = "dot" + (k < i ? " done" : k === i ? " now" : "");
+    });
+    t0 = performance.now();
+    draw(0);
+  }
+
+  function draw(p) {
+    var s = steps[i], a = centers[s.from], b = centers[s.to], e = ease(p);
+    var x = a[0] + (b[0] - a[0]) * e, y = a[1] + (b[1] - a[1]) * e;
+    packet.setAttribute("transform", "translate(" + x + " " + y + ")");
+  }
+
+  function frame(now) {
+    if (playing) {
+      var el = now - t0;
+      draw(Math.min(el / MOVE, 1));
+      if (el > MOVE + HOLD) setStep(i + 1);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  var playBtn = document.getElementById("play");
+  playBtn.addEventListener("click", function () {
+    if (playing) { playing = false; pausedAt = performance.now(); playBtn.textContent = "Reanudar"; }
+    else { t0 += performance.now() - pausedAt; playing = true; playBtn.textContent = "Pausar"; }
+  });
+  document.getElementById("next").addEventListener("click", function () { setStep(i + 1); if (!playing) draw(1); });
+  document.getElementById("prev").addEventListener("click", function () { setStep(i - 1); if (!playing) draw(1); });
+
+  setStep(0);
+  draw(1);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
